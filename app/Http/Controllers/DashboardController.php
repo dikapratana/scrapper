@@ -36,15 +36,21 @@ class DashboardController extends Controller
 
         $keyword = 'thinkpad';
         // return $this->bukalapak($keyword);
-        return $this->shopee($keyword);
+        // return $this->test($keyword);
+        // return $this->convert($keyword);
 
         return view('page/dashboard');
     }
-    public function bukalapak($keyword)
+    public function crawling(Request $request)
     {
+        return $this->bukalapak( $request);
+    }
+    public function bukalapak( $request)
+    {
+        $keyword = $request->keyword;
+        $filter = $request->filter;
+        $url = 'https://www.bukalapak.com/products?utf8=%E2%9C%93&search%5Bkeywords%5D='.$keyword.'&search%5Bsort_by%5D='.$filter.'';
         try {
-            // echo 'halooo';
-            $url = 'https://www.bukalapak.com/products?utf8=%E2%9C%93&source=navbar&from=omnisearch&search_source=omnisearch_organic&from_keyword_history=false&search%5Bkeywords%5D='.$keyword;
             $client = new \GuzzleHttp\Client();
             $response = $client->request('GET', $url);
 
@@ -54,6 +60,7 @@ class DashboardController extends Controller
             $crawler = new Crawler($html);
             // $crawler->filter('body');
             // print_r($crawler);
+            // echo $html;
             $items = $crawler->filter('.product-gallery.products.row-grid > li > div')->each(function (Crawler $node, $i) {
                 // echo $node->html();
                 // echo $node->text();
@@ -66,54 +73,104 @@ class DashboardController extends Controller
                 ];
                 return $item;
             });
-            print_r($items);
+            $data['html'] = '';
+            // return  response()->json($items);
+            if(!empty($items)){
+                foreach($items as $key => $value){
+                    $data['html'] .= '<div class="col-md-3">';
+                        $data['html'] .= '<div class="box box-widget widget-user">';
+                        $data['html'] .= '<div class="widget-user-header bg-black" style="background: url('.$value['image'].') center center;">';
+                        $data['html'] .= '</div>';
+                        $data['html'] .= '<div class="widget-user-image">';
+                        $data['html'] .= '</div>';
+                        $data['html'] .= '<div class="box-footer">';
+                            $data['html'] .= '<div class="row">';
+                            $data['html'] .= '<div class="col-md-12 border-right">';
+                                $data['html'] .= '<div class="description-block">';
+                                $data['html'] .= '<h5 class="description-header" title="'.$value['title'].'">'.\Illuminate\Support\Str::limit($value['title'], 20, $end='...') .'</h5>';
+                                $data['html'] .= '<span class="description-text">SALES</span>';
+                                $data['html'] .= '</div>';
+                            $data['html'] .= '</div>';
+                            $data['html'] .= '</div>';
+                        $data['html'] .= '</div>';
+                        $data['html'] .= '</div>';
+                    $data['html'] .= '</div>';
+                }
+            }else{
+                $data['html'] .= '<div class="col-md-12">';
+                    $data['html'] .= '<div class="card card-primary">';
+                    $data['html'] .= '<div class="card-body">';
+                        $data['html'] .= 'Data Not Found';
+                    $data['html'] .= '</div>';
+                   $data['html'] .= ' </div>';
+                $data['html'] .= '</div>';
+            }
+
+
+
+            return  response()->json($data);
 
         } catch (ClientErrorResponseException $exception) {
-            print_r($exception);
+            $data['html'] = '';
+            $data['html'] .= '<div class="col-md-12">';
+                $data['html'] .= '<div class="card card-primary">';
+                $data['html'] .= '<div class="card-body">';
+                    $data['html'] .= ''.$exception.'';
+                $data['html'] .= '</div>';
+                $data['html'] .= ' </div>';
+            $data['html'] .= '</div>';
+            return  response()->json($data);
         }
     }
     public function shopee($keyword)
     {
         try {
-            // pakai curl
-            $curl = curl_init('https://www.lazada.co.id/catalog/?spm=a2o4j.home.search.1.57991559wJUuOu&q=thinkpad&_keyori=ss&from=search_history&sugg=thinkpad_0_1');
-            curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
-
-            $page = curl_exec($curl);
-
-            if(curl_errno($curl)) // check for execution errors
-            {
-                echo 'Scraper error: ' . curl_error($curl);
-                exit;
-            }
-
-            curl_close($curl);
-            echo $page;
-            // $regex = '/<div id="case_textlist">(.*?)<\/div>/s';
-            // if ( preg_match($regex, $page, $list) )
-            //     echo $list[0];
-            // else
-            //     print "Not found";
-
-            // end
-
-            // pakai Goutte
-            // $url = 'https://www.symfony.com/blog/';
-
-            // $client = new Client();
-            // $crawler = $client->request('GET', $url);
-            // // print_r($crawler);
-            // // Get the latest post in this category and display the titles
-            // $crawler->filter('h2 > a')->each(function ($node) {
-            //     print $node->text()."\n";
-            // });
-
-            // end
-
+            $url = 'https://www.jd.id/search?keywords=thinkpad&sortType=sort_commentcount_desc';
+            $client = new Client();
+            $crawler = $client->request('GET', $url);
+            print_r($crawler);
+            // Get the latest post in this category and display the titles
+            $crawler->filter('span')->each(function ($node) {
+                print $node->text()."\n";
+            });
 
         } catch (ClientErrorResponseException $exception) {
             print_r($exception);
         }
     }
+
+    public function test($keyword)
+    {
+
+
+
+        try {
+            //  Create a new Goutte client instance
+    $client = new Client();
+
+    //  Hackery to allow HTTPS
+       $guzzleclient = new \GuzzleHttp\Client([
+           'timeout' => 60,
+           'verify' => false,
+       ]);
+
+       // Create DOM from URL or file
+       $html = file_get_html('https://www.facebook.com');
+
+       // Find all images
+       foreach ($html->find('img') as $element) {
+           echo $element->src . '<br>';
+       }
+
+       // Find all links
+       foreach ($html->find('a') as $element) {
+           echo $element->href . '<br>';
+       }
+
+        } catch (ClientErrorResponseException $exception) {
+            print_r($exception);
+        }
+    }
+
 
 }

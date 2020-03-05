@@ -11,6 +11,8 @@
 |
 */
 Route::get('/', 'DashboardController@index')->name('home.frontend');
+Route::post('/crawling-post', 'DashboardController@crawling')->name('home.crawling');
+Route::get('/crawling-test', 'DashboardController@test')->name('test.crawling');
 // Route::get('/', function () {
 //     return view('base_template');
 // });
